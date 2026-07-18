@@ -32,12 +32,22 @@ const CLIENTS = {
 });
 const DEV_OK = origin => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 
-function redirectAllowed(clientId, redirectUri) {
+/* 동적 등록 클라이언트(bn_...)는 bytenode Firestore에서 조회 */
+async function getClient(clientId) {
+  if (CLIENTS[clientId]) return { clientId, name: clientId, origins: CLIENTS[clientId].origins, builtin: true };
+  if (!/^bn_[0-9a-f]{16}$/.test(clientId || '')) return null;
+  try {
+    const { status, data } = await bn('/api/oauth/clients/' + clientId + '/public');
+    return status === 200 ? { ...data, builtin: false } : null;
+  } catch { return null; }
+}
+
+async function redirectAllowed(clientId, redirectUri) {
   try {
     const u = new URL(redirectUri);
     if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
     if (DEV_OK(u.origin)) return true;
-    const c = CLIENTS[clientId];
+    const c = await getClient(clientId);
     return !!c && c.origins.includes(u.origin);
   } catch { return false; }
 }
@@ -50,7 +60,7 @@ app.use((req, res, next) => {
   /* 각 서비스 프론트에서 직접 호출할 수 있게 CORS 개방 (토큰은 헤더/바디로만 전달) */
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
@@ -116,7 +126,7 @@ app.post('/api/authorize', async (req, res) => {
   try {
     const { token, client_id, redirect_uri, state } = req.body || {};
     if (!token || !client_id || !redirect_uri) return res.status(400).json({ error: '필수 파라미터가 없습니다.' });
-    if (!redirectAllowed(client_id, redirect_uri)) return res.status(400).json({ error: '허용되지 않은 redirect_uri입니다.' });
+    if (!(await redirectAllowed(client_id, redirect_uri))) return res.status(400).json({ error: '허용되지 않은 redirect_uri입니다. /developer에서 앱의 redirect origin을 확인하세요.' });
 
     /* 토큰 유효성은 bytenode에 물어봄 */
     const { status } = await bn('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } });
@@ -132,9 +142,15 @@ app.post('/api/authorize', async (req, res) => {
 
 app.post('/token', async (req, res) => {
   try {
-    const { grant_type, code, client_id } = req.body || {};
+    const { grant_type, code, client_id, client_secret } = req.body || {};
     if (grant_type && grant_type !== 'authorization_code') return res.status(400).json({ error: 'unsupported_grant_type' });
     if (!code || !client_id) return res.status(400).json({ error: 'invalid_request' });
+    /* 개발자 콘솔에서 발급된 앱은 client_secret 필수 */
+    if (/^bn_[0-9a-f]{16}$/.test(client_id)) {
+      if (!client_secret) return res.status(401).json({ error: 'invalid_client', error_description: 'client_secret이 필요합니다.' });
+      const { status } = await bn('/api/oauth/verify', { method: 'POST', body: JSON.stringify({ clientId: client_id, clientSecret: client_secret }) });
+      if (status !== 200) return res.status(401).json({ error: 'invalid_client' });
+    }
     let payload;
     try { payload = jwt.verify(code, SSO_SECRET, { audience: client_id }); }
     catch { return res.status(400).json({ error: 'invalid_grant' }); }
@@ -156,6 +172,40 @@ app.get('/userinfo', async (req, res) => {
 /* 등록된 클라이언트 목록 (개발자 페이지용) */
 app.get('/api/clients', (req, res) => {
   res.json(Object.entries(CLIENTS).map(([id, c]) => ({ client_id: id, origins: c.origins })));
+});
+
+/* ── 개발자 콘솔: 내 OAuth 앱 관리 (bytenode 로그인 필요, 프록시) ── */
+app.get('/api/apps', async (req, res) => {
+  try {
+    const { status, data } = await bn('/api/oauth/clients', { headers: { Authorization: req.headers.authorization || '' } });
+    res.status(status).json(data);
+  } catch (e) { res.status(502).json({ error: '계정 서버에 연결할 수 없습니다.' }); }
+});
+app.post('/api/apps', async (req, res) => {
+  try {
+    const { status, data } = await bn('/api/oauth/clients', {
+      method: 'POST',
+      headers: { Authorization: req.headers.authorization || '' },
+      body: JSON.stringify({ name: req.body?.name, origins: req.body?.origins })
+    });
+    res.status(status).json(data);
+  } catch (e) { res.status(502).json({ error: '계정 서버에 연결할 수 없습니다.' }); }
+});
+app.delete('/api/apps/:id', async (req, res) => {
+  try {
+    const { status, data } = await bn('/api/oauth/clients/' + encodeURIComponent(req.params.id), {
+      method: 'DELETE',
+      headers: { Authorization: req.headers.authorization || '' }
+    });
+    res.status(status).json(data);
+  } catch (e) { res.status(502).json({ error: '계정 서버에 연결할 수 없습니다.' }); }
+});
+
+/* 인가 화면에서 앱 이름 표시용 */
+app.get('/api/clientinfo/:id', async (req, res) => {
+  const c = await getClient(req.params.id);
+  if (!c) return res.status(404).json({ error: '등록되지 않은 client_id입니다.' });
+  res.json({ clientId: c.clientId, name: c.name });
 });
 
 /* 페이지 라우트 */

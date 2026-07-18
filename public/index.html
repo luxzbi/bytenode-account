@@ -258,8 +258,17 @@ const oauth = {
 };
 const simpleRedirect = qs.get('redirect');
 const serviceNames = { bytenode:'bytenode', byteexam:'byteexam', bytetext:'bytetext', bytewrite:'bytewrite' };
-if (oauth.clientId && serviceNames[oauth.clientId]) {
-  $('sub').innerHTML = '<b>' + serviceNames[oauth.clientId] + '</b>에서 사용할 계정으로 계속하세요';
+if (oauth.clientId) {
+  if (serviceNames[oauth.clientId]) {
+    $('sub').innerHTML = '<b>' + serviceNames[oauth.clientId] + '</b>에서 사용할 계정으로 계속하세요';
+  } else {
+    fetch('/api/clientinfo/' + encodeURIComponent(oauth.clientId)).then(r => r.ok ? r.json() : null).then(c => {
+      if (!c) return;
+      const b = document.createElement('b'); b.textContent = c.name;
+      $('sub').textContent = '에서 사용할 계정으로 계속하세요';
+      $('sub').prepend(b);
+    }).catch(() => {});
+  }
 }
 
 let mode = 'login';
