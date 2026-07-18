@@ -50,7 +50,7 @@ app.use((req, res, next) => {
   /* 각 서비스 프론트에서 직접 호출할 수 있게 CORS 개방 (토큰은 헤더/바디로만 전달) */
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
@@ -79,6 +79,18 @@ app.post('/api/register', async (req, res) => {
   try {
     const { username, displayName, password } = req.body || {};
     const { status, data } = await bn('/api/auth/register', { method: 'POST', body: JSON.stringify({ username, displayName, password }) });
+    res.status(status).json(data);
+  } catch (e) { res.status(502).json({ error: '계정 서버에 연결할 수 없습니다.' }); }
+});
+
+app.patch('/api/me', async (req, res) => {
+  try {
+    const { displayName, bio } = req.body || {};
+    const { status, data } = await bn('/api/auth/me', {
+      method: 'PATCH',
+      headers: { Authorization: req.headers.authorization || '' },
+      body: JSON.stringify({ displayName, bio })
+    });
     res.status(status).json(data);
   } catch (e) { res.status(502).json({ error: '계정 서버에 연결할 수 없습니다.' }); }
 });

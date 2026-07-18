@@ -71,7 +71,35 @@ input::placeholder{color:var(--text3);}
 .below a{color:var(--text3);text-decoration:none;}
 .below a:hover{color:var(--text2);}
 .below .dot{width:2px;height:2px;border-radius:50%;background:var(--text3);}
-#nameRow{display:none;}
+/* ── 회원가입 스텝 마법사 ── */
+.steps{display:none;}
+.stepbar{display:flex;gap:5px;margin:24px 0 2px;}
+.stepbar i{flex:1;height:3px;border-radius:2px;background:var(--bg3);transition:background .25s;}
+.stepbar i.on{background:var(--text);}
+.stepnum{font-size:11.5px;color:var(--text3);margin-top:10px;letter-spacing:.04em;font-weight:600;}
+.steptitle{font-size:16.5px;font-weight:700;margin-top:6px;letter-spacing:-.3px;}
+.stepdesc{font-size:12.5px;color:var(--text2);margin-top:5px;line-height:1.65;}
+.step{display:none;}
+.step.on{display:block;}
+.agree-box{
+  margin-top:16px;border:1px solid var(--border2);border-radius:10px;background:var(--bg3);
+  padding:4px 14px;
+}
+.agree-row{display:flex;align-items:center;gap:10px;padding:11px 0;font-size:13px;color:var(--text);cursor:pointer;user-select:none;}
+.agree-row + .agree-row{border-top:1px solid var(--border);}
+.agree-row input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;}
+.agree-row .req{font-size:11px;color:var(--text3);margin-left:auto;flex-shrink:0;}
+.agree-row a{color:var(--text2);}
+.agree-all{font-weight:600;}
+.navrow{display:flex;gap:10px;margin-top:22px;}
+.navrow .ghost{margin-top:0;flex:0 0 88px;}
+.navrow .btn{margin-top:0;flex:1;}
+textarea#bio{
+  width:100%;min-height:88px;resize:vertical;padding:11px 13px;border-radius:9px;font-size:14px;
+  background:var(--bg3);border:1px solid var(--border2);color:var(--text);outline:none;font-family:inherit;line-height:1.6;
+  transition:border-color .15s, box-shadow .15s;
+}
+textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,232,.08);}
 .already{display:none;text-align:center;padding-top:8px;}
 .already .who{font-size:14.5px;color:var(--text2);margin-top:20px;}
 .already .who b{color:var(--text);font-weight:600;}
@@ -103,18 +131,60 @@ input::placeholder{color:var(--text3);}
       <button id="tabSignup" type="button">회원가입</button>
     </div>
 
+    <!-- 로그인 -->
     <form id="form" autocomplete="on">
       <label>아이디</label>
-      <input type="text" id="username" autocomplete="username" required>
-      <div id="nameRow">
-        <label>표시 이름</label>
-        <input type="text" id="displayName" maxlength="20">
-      </div>
+      <input type="text" id="username" autocomplete="username">
       <label>비밀번호</label>
-      <input type="password" id="password" autocomplete="current-password" required minlength="6" maxlength="128">
+      <input type="password" id="password" autocomplete="current-password" minlength="6" maxlength="128">
       <label class="rem"><input type="checkbox" id="remember" checked> 로그인 상태 유지</label>
       <button class="btn" id="submitBtn" type="submit">로그인</button>
     </form>
+
+    <!-- 회원가입: 5단계 -->
+    <div class="steps" id="steps">
+      <div class="stepbar" id="stepbar"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="stepnum" id="stepNum">1 / 5 단계</div>
+      <div class="steptitle" id="stepTitle"></div>
+      <div class="stepdesc" id="stepDesc"></div>
+
+      <div class="step" data-step="0">
+        <div class="agree-box">
+          <label class="agree-row agree-all"><input type="checkbox" id="agAll"> 모두 동의합니다</label>
+          <label class="agree-row"><input type="checkbox" class="ag" id="agTerms"> <a href="/terms" target="_blank">이용약관</a> 동의 <span class="req">(필수)</span></label>
+          <label class="agree-row"><input type="checkbox" class="ag" id="agPrivacy"> <a href="/privacy" target="_blank">개인정보처리방침</a> 동의 <span class="req">(필수)</span></label>
+        </div>
+      </div>
+
+      <div class="step" data-step="1">
+        <label>아이디</label>
+        <input type="text" id="suId" autocomplete="username" maxlength="20" placeholder="영문, 숫자 조합">
+      </div>
+
+      <div class="step" data-step="2">
+        <label>비밀번호</label>
+        <input type="password" id="suPw" autocomplete="new-password" minlength="6" maxlength="128" placeholder="6자 이상">
+        <label>비밀번호 확인</label>
+        <input type="password" id="suPw2" autocomplete="new-password" maxlength="128" placeholder="한 번 더 입력">
+      </div>
+
+      <div class="step" data-step="3">
+        <label>표시 이름</label>
+        <input type="text" id="suName" maxlength="20" placeholder="다른 사용자에게 보이는 이름">
+      </div>
+
+      <div class="step" data-step="4">
+        <label>설명 <span style="font-weight:400;color:var(--text3)">(선택)</span></label>
+        <textarea id="bio" maxlength="200" placeholder="자기소개를 남겨보세요"></textarea>
+        <label class="rem"><input type="checkbox" id="suRemember" checked> 로그인 상태 유지</label>
+      </div>
+
+      <div class="navrow">
+        <button class="ghost" id="prevBtn" type="button">이전</button>
+        <button class="btn" id="nextBtn" type="button">다음</button>
+      </div>
+    </div>
+
     <div class="msg" id="msg"></div>
   </div>
 
@@ -151,10 +221,99 @@ function setMode(m) {
   mode = m;
   $('tabLogin').classList.toggle('on', m === 'login');
   $('tabSignup').classList.toggle('on', m === 'signup');
-  $('nameRow').style.display = m === 'signup' ? 'block' : 'none';
-  $('submitBtn').textContent = m === 'signup' ? '가입하기' : '로그인';
+  $('form').style.display = m === 'login' ? 'block' : 'none';
+  $('steps').style.display = m === 'signup' ? 'block' : 'none';
   $('msg').textContent = '';
+  if (m === 'signup') showStep(0);
 }
+
+/* ── 회원가입 스텝 마법사 ── */
+const STEP_META = [
+  { t: '약관 동의',        d: '서비스 이용을 위해 아래 항목에 동의해 주세요.' },
+  { t: '아이디 만들기',    d: '로그인에 사용할 아이디입니다. 영문·숫자 3~20자.' },
+  { t: '비밀번호 설정',    d: '6자 이상의 비밀번호를 입력하고 한 번 더 확인합니다.' },
+  { t: '표시 이름 정하기', d: 'bytenode · byteexam · bytetext에서 보이는 이름입니다.' },
+  { t: '설명 추가',        d: '프로필에 표시될 소개를 남길 수 있습니다. 건너뛰어도 됩니다.' }
+];
+let step = 0;
+function showStep(n) {
+  step = n;
+  document.querySelectorAll('.step').forEach(el => el.classList.toggle('on', +el.dataset.step === n));
+  document.querySelectorAll('#stepbar i').forEach((el, i) => el.classList.toggle('on', i <= n));
+  $('stepNum').textContent = (n + 1) + ' / 5 단계';
+  $('stepTitle').textContent = STEP_META[n].t;
+  $('stepDesc').textContent = STEP_META[n].d;
+  $('prevBtn').style.visibility = n === 0 ? 'hidden' : 'visible';
+  $('nextBtn').textContent = n === 4 ? '가입하기' : '다음';
+  $('msg').textContent = '';
+  const first = document.querySelector('.step.on input, .step.on textarea');
+  if (first) setTimeout(() => first.focus(), 30);
+}
+function stepError(t) { $('msg').className = 'msg err'; $('msg').textContent = t; }
+
+/* 전체 동의 연동 */
+$('agAll').onchange = () => document.querySelectorAll('.ag').forEach(c => c.checked = $('agAll').checked);
+document.querySelectorAll('.ag').forEach(c => c.onchange = () => {
+  $('agAll').checked = [...document.querySelectorAll('.ag')].every(x => x.checked);
+});
+
+function validateStep(n) {
+  if (n === 0) {
+    if (!$('agTerms').checked || !$('agPrivacy').checked) return '필수 약관에 모두 동의해 주세요.';
+  }
+  if (n === 1) {
+    const v = $('suId').value.trim();
+    if (!v) return '아이디를 입력하세요.';
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(v)) return '아이디는 영문·숫자·밑줄(_) 3~20자여야 합니다.';
+  }
+  if (n === 2) {
+    if ($('suPw').value.length < 6) return '비밀번호는 6자 이상이어야 합니다.';
+    if ($('suPw').value !== $('suPw2').value) return '비밀번호가 일치하지 않습니다.';
+  }
+  if (n === 3) {
+    const v = $('suName').value.trim();
+    if (!v) return '표시 이름을 입력하세요.';
+    if (v.length < 2) return '표시 이름은 2자 이상이어야 합니다.';
+  }
+  return null;
+}
+
+$('prevBtn').onclick = () => { if (step > 0) showStep(step - 1); };
+$('nextBtn').onclick = async () => {
+  const err = validateStep(step);
+  if (err) return stepError(err);
+  if (step < 4) return showStep(step + 1);
+  /* 최종 가입 */
+  const btn = $('nextBtn'), msg = $('msg');
+  btn.disabled = true; msg.className = 'msg'; msg.textContent = '가입 중…';
+  try {
+    const r = await fetch('/api/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: $('suId').value.trim(), displayName: $('suName').value.trim(), password: $('suPw').value })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || '가입에 실패했습니다.');
+    saveSession(data.token, data.user, $('suRemember').checked);
+    const bio = $('bio').value.trim();
+    if (bio) {
+      await fetch('/api/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + data.token },
+        body: JSON.stringify({ bio })
+      }).catch(() => {});
+    }
+    msg.className = 'msg ok'; msg.textContent = '가입 완료. 이동 중…';
+    await finish(data.token);
+  } catch (e) {
+    stepError(e.message);
+    btn.disabled = false;
+    if (/아이디/.test(e.message)) showStep(1);
+  }
+};
+/* 엔터로 다음 단계 */
+document.querySelectorAll('#steps input').forEach(el => el.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); $('nextBtn').click(); }
+}));
 $('tabLogin').onclick = () => setMode('login');
 $('tabSignup').onclick = () => setMode('signup');
 /* /welcome → 회원가입, /login → 로그인 */
@@ -224,23 +383,19 @@ $('form').onsubmit = async e => {
   const btn = $('submitBtn'), msg = $('msg');
   const username = $('username').value.trim();
   const password = $('password').value;
-  const displayName = $('displayName').value.trim();
-  const remember = $('remember').checked;
-  if (mode === 'signup' && !displayName) { msg.className = 'msg err'; msg.textContent = '표시 이름을 입력하세요.'; return; }
+  if (!username || !password) { msg.className = 'msg err'; msg.textContent = '아이디와 비밀번호를 입력하세요.'; return; }
 
   btn.disabled = true; msg.className = 'msg'; msg.textContent = '처리 중…';
   try {
-    const url = mode === 'signup' ? '/api/register' : '/api/login';
-    const body = mode === 'signup' ? { username, displayName, password } : { username, password };
-    const r = await fetch(url, {
+    const r = await fetch('/api/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify({ username, password })
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || '요청에 실패했습니다.');
-    saveSession(data.token, data.user, remember);
+    saveSession(data.token, data.user, $('remember').checked);
     msg.className = 'msg ok';
-    msg.textContent = (mode === 'signup' ? '가입 완료. ' : '로그인 성공. ') + '이동 중…';
+    msg.textContent = '로그인 성공. 이동 중…';
     await finish(data.token);
   } catch (err) {
     msg.className = 'msg err';
