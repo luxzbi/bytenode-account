@@ -3,71 +3,96 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>bytenode 계정 — 로그인</title>
+<title>bytenode 계정</title>
 <style>
 :root{
-  --bg:#0a0a0a; --bg2:#111111; --bg3:#1a1a1a;
-  --border:#262626; --border2:#333333;
-  --text:#e8e8e8; --text2:#999999; --accent:#c8c8c8;
-  --err:#ff6b6b; --ok:#6bcf8e;
+  --bg:#0a0a0a; --bg2:#111214; --bg3:#191b1e;
+  --border:#232529; --border2:#33363c;
+  --text:#eceef0; --text2:#8b9097; --text3:#5c6167; --accent:#c8c8c8;
+  --err:#ff6b6b; --ok:#6bcf8e; --focus:#e8e8e8;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI","Apple SD Gothic Neo",sans-serif;}
-body{display:flex;align-items:center;justify-content:center;padding:20px;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI","Apple SD Gothic Neo",sans-serif;-webkit-font-smoothing:antialiased;}
+body{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;
+  background:
+    radial-gradient(1200px 500px at 50% -10%, rgba(200,200,200,.045), transparent 60%),
+    var(--bg);
+}
 .card{
-  width:100%;max-width:400px;background:var(--bg2);
-  border:1px solid var(--border);border-radius:14px;padding:36px 32px;
+  width:100%;max-width:392px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:16px;padding:40px 36px 32px;
+  box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 24px 60px -30px rgba(0,0,0,.8);
 }
-.logo{font-size:22px;font-weight:700;letter-spacing:-.5px;text-align:center;}
-.logo span{color:var(--text2);}
-.sub{font-size:13px;color:var(--text2);text-align:center;margin:8px 0 26px;line-height:1.6;}
+.mark{
+  width:44px;height:44px;margin:0 auto 18px;border-radius:12px;
+  background:linear-gradient(145deg,#232529,#141518);
+  border:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:19px;letter-spacing:-1px;color:var(--text);
+}
+.logo{font-size:19px;font-weight:700;letter-spacing:-.4px;text-align:center;}
+.logo span{color:var(--text2);font-weight:500;}
+.sub{font-size:13px;color:var(--text2);text-align:center;margin-top:7px;line-height:1.6;min-height:0;}
+.sub:empty{display:none;}
 .sub b{color:var(--accent);font-weight:600;}
-.tabs{display:flex;gap:6px;margin-bottom:22px;background:var(--bg3);border-radius:9px;padding:4px;}
+.tabs{display:flex;gap:4px;margin:26px 0 4px;background:var(--bg3);border-radius:10px;padding:4px;border:1px solid var(--border);}
 .tabs button{
-  flex:1;padding:9px 0;border:none;border-radius:6px;background:none;
+  flex:1;padding:9px 0;border:none;border-radius:7px;background:none;
   color:var(--text2);font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;
+  transition:color .15s,background .15s;
 }
-.tabs button.on{background:var(--bg);color:var(--text);}
-label{display:block;font-size:12.5px;color:var(--text2);margin:14px 0 6px;}
+.tabs button.on{background:var(--bg);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.5);}
+label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin:16px 0 6px;letter-spacing:.02em;}
 input[type=text],input[type=password]{
-  width:100%;padding:11px 13px;border-radius:8px;font-size:14px;
+  width:100%;padding:11px 13px;border-radius:9px;font-size:14px;
   background:var(--bg3);border:1px solid var(--border2);color:var(--text);outline:none;font-family:inherit;
+  transition:border-color .15s, box-shadow .15s;
 }
-input:focus{border-color:var(--accent);}
-.rem{display:flex;align-items:center;gap:7px;margin-top:14px;font-size:13px;color:var(--text2);cursor:pointer;user-select:none;}
-.rem input{accent-color:var(--accent);}
+input[type=text]:focus,input[type=password]:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,232,.08);}
+input::placeholder{color:var(--text3);}
+.rem{display:flex;align-items:center;gap:8px;margin-top:16px;font-size:13px;color:var(--text2);cursor:pointer;user-select:none;}
+.rem input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}
 .btn{
-  width:100%;margin-top:22px;padding:12px 0;border:none;border-radius:8px;
+  width:100%;margin-top:22px;padding:12px 0;border:none;border-radius:9px;
   background:var(--text);color:#0a0a0a;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:background .15s, transform .05s;
 }
-.btn:hover{background:#fff;}
-.btn:disabled{opacity:.5;cursor:default;}
+.btn:hover{background:#ffffff;}
+.btn:active{transform:translateY(1px);}
+.btn:disabled{opacity:.45;cursor:default;transform:none;}
 .msg{font-size:13px;margin-top:14px;text-align:center;min-height:18px;}
 .msg.err{color:var(--err);}
 .msg.ok{color:var(--ok);}
-.foot{font-size:12px;color:var(--text2);text-align:center;margin-top:22px;line-height:2;}
-.foot a{color:var(--accent);text-decoration:none;}
-.foot a:hover{text-decoration:underline;}
+.foot{font-size:11.5px;color:var(--text3);text-align:center;margin-top:24px;padding-top:18px;border-top:1px solid var(--border);line-height:1.9;}
+.foot a{color:var(--text2);text-decoration:none;}
+.foot a:hover{color:var(--text);text-decoration:underline;}
+.below{font-size:11.5px;color:var(--text3);margin-top:22px;display:flex;gap:14px;align-items:center;}
+.below a{color:var(--text3);text-decoration:none;}
+.below a:hover{color:var(--text2);}
+.below .dot{width:2px;height:2px;border-radius:50%;background:var(--text3);}
 #nameRow{display:none;}
-.already{display:none;text-align:center;}
-.already .who{font-size:15px;margin:18px 0 4px;}
-.already .who b{color:#fff;}
-.already .btn{margin-top:18px;}
+.already{display:none;text-align:center;padding-top:8px;}
+.already .who{font-size:14.5px;color:var(--text2);margin-top:20px;}
+.already .who b{color:var(--text);font-weight:600;}
+.already .btn{margin-top:20px;}
 .ghost{
-  width:100%;margin-top:10px;padding:11px 0;border:1px solid var(--border2);border-radius:8px;
+  width:100%;margin-top:10px;padding:11px 0;border:1px solid var(--border2);border-radius:9px;
   background:none;color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit;
+  transition:color .15s,border-color .15s;
 }
 .ghost:hover{color:var(--text);border-color:var(--accent);}
 </style>
 </head>
 <body>
 <div class="card">
-  <div class="logo">bytenode<span> 계정</span></div>
-  <div class="sub" id="sub">계정 하나로 <b>bytenode · byteexam · bytetext · bytewrite</b>를<br>모두 이용하세요</div>
+  <div class="mark">b</div>
+  <div class="logo">bytenode <span>계정</span></div>
+  <div class="sub" id="sub"></div>
 
   <!-- 이미 로그인된 경우 -->
   <div class="already" id="alreadyBox">
-    <div class="who">이미 <b id="alreadyName"></b>님으로 로그인되어 있습니다</div>
+    <div class="who"><b id="alreadyName"></b>님으로 로그인되어 있습니다</div>
     <button class="btn" id="continueBtn">이 계정으로 계속하기</button>
     <button class="ghost" id="switchBtn">다른 계정 사용</button>
   </div>
@@ -98,6 +123,13 @@ input:focus{border-color:var(--accent);}
   </div>
 </div>
 
+<div class="below">
+  <a href="/developer">개발자</a><span class="dot"></span>
+  <a href="/terms">약관</a><span class="dot"></span>
+  <a href="/privacy">개인정보</a><span class="dot"></span>
+  <span>© bytenode</span>
+</div>
+
 <script>
 const $ = id => document.getElementById(id);
 const qs = new URLSearchParams(location.search);
@@ -111,7 +143,7 @@ const oauth = {
 const simpleRedirect = qs.get('redirect');
 const serviceNames = { bytenode:'bytenode', byteexam:'byteexam', bytetext:'bytetext', bytewrite:'bytewrite' };
 if (oauth.clientId && serviceNames[oauth.clientId]) {
-  $('sub').innerHTML = '<b>' + serviceNames[oauth.clientId] + '</b>에서 사용할 bytenode 계정으로 계속하세요';
+  $('sub').innerHTML = '<b>' + serviceNames[oauth.clientId] + '</b>에서 사용할 계정으로 계속하세요';
 }
 
 let mode = 'login';
@@ -208,7 +240,7 @@ $('form').onsubmit = async e => {
     if (!r.ok) throw new Error(data.error || '요청에 실패했습니다.');
     saveSession(data.token, data.user, remember);
     msg.className = 'msg ok';
-    msg.textContent = (mode === 'signup' ? '가입 완료! ' : '로그인 성공! ') + '이동 중…';
+    msg.textContent = (mode === 'signup' ? '가입 완료. ' : '로그인 성공. ') + '이동 중…';
     await finish(data.token);
   } catch (err) {
     msg.className = 'msg err';
