@@ -13,16 +13,44 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI","Apple SD Gothic Neo",sans-serif;-webkit-font-smoothing:antialiased;}
-body{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;
+body{background:var(--bg);}
+.split{display:flex;min-height:100vh;}
+.pane-auth{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;
   background:
     radial-gradient(1200px 500px at 50% -10%, rgba(200,200,200,.045), transparent 60%),
     var(--bg);
 }
+.pane-brand{display:none;}
 .card{
   width:100%;max-width:392px;background:var(--bg2);
   border:1px solid var(--border);border-radius:16px;padding:40px 36px 32px;
   box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 24px 60px -30px rgba(0,0,0,.8);
+}
+/* ── PC: 좌측 폼 + 우측 브랜딩 분할 ── */
+@media (min-width: 920px){
+  .pane-auth{flex:0 0 46%;min-width:520px;background:var(--bg);}
+  .card{max-width:400px;background:none;border:none;box-shadow:none;padding:24px 8px;}
+  .pane-brand{
+    display:flex;flex:1;position:relative;overflow:hidden;
+    align-items:center;justify-content:center;
+    border-left:1px solid var(--border);
+    background:
+      radial-gradient(900px 700px at 85% 100%, rgba(200,205,215,.16), transparent 60%),
+      radial-gradient(700px 500px at 30% 20%, rgba(120,130,150,.08), transparent 65%),
+      linear-gradient(200deg,#101114 0%,#0a0a0b 55%,#0e0f12 100%);
+  }
+  .pane-brand .glyph{
+    font-family:inherit;font-weight:800;font-size:min(34vw,460px);line-height:1;
+    letter-spacing:-.06em;user-select:none;
+    background:linear-gradient(160deg, rgba(220,224,232,.16) 0%, rgba(150,155,165,.05) 55%, rgba(255,255,255,.10) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 8px 40px rgba(0,0,0,.55));
+  }
+  .pane-brand .word{
+    position:absolute;left:44px;bottom:36px;font-size:14px;color:var(--text2);letter-spacing:.02em;
+  }
+  .pane-brand .word b{color:var(--text);font-weight:700;}
 }
 .mark{
   width:44px;height:44px;margin:0 auto 18px;border-radius:12px;
@@ -113,6 +141,8 @@ textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,2
 </style>
 </head>
 <body>
+<div class="split">
+<div class="pane-auth">
 <div class="card">
   <div class="mark">b</div>
   <div class="logo">bytenode <span>계정</span></div>
@@ -208,6 +238,13 @@ textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,2
   <a href="/privacy">개인정보</a><span class="dot"></span>
   <span>© bytenode</span>
 </div>
+</div><!-- /pane-auth -->
+
+<div class="pane-brand">
+  <div class="glyph">b</div>
+  <div class="word"><b>bytenode</b> 통합 계정</div>
+</div>
+</div><!-- /split -->
 
 <script>
 const $ = id => document.getElementById(id);
