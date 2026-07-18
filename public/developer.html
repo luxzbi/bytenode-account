@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bytenode 계정 — 개발자 (OAuth 설정)</title>
+<style>
+:root{
+  --bg:#0a0a0a; --bg2:#111111; --bg3:#1a1a1a;
+  --border:#262626; --border2:#333333;
+  --text:#e8e8e8; --text2:#999999; --accent:#c8c8c8; --ok:#6bcf8e;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{background:var(--bg);color:var(--text);font-family:"Segoe UI","Apple SD Gothic Neo",sans-serif;}
+.wrap{max-width:820px;margin:0 auto;padding:48px 22px 80px;}
+h1{font-size:24px;letter-spacing:-.5px;}
+h1 span{color:var(--text2);font-weight:400;}
+h2{font-size:17px;margin:38px 0 12px;padding-top:26px;border-top:1px solid var(--border);}
+p,li{font-size:14px;color:var(--text2);line-height:1.8;}
+b{color:var(--text);font-weight:600;}
+code{background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:2px 7px;font-size:12.5px;color:var(--accent);font-family:Consolas,monospace;}
+pre{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;font-size:12.5px;line-height:1.7;overflow-x:auto;margin:12px 0;font-family:Consolas,monospace;color:#c8d8c8;}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;}
+th,td{border:1px solid var(--border);padding:9px 12px;text-align:left;}
+th{background:var(--bg2);color:var(--text2);font-weight:600;}
+td{color:var(--text);}
+td code{white-space:nowrap;}
+.builder{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px;margin:14px 0;}
+.builder label{display:block;font-size:12.5px;color:var(--text2);margin:12px 0 5px;}
+.builder input,.builder select{
+  width:100%;padding:10px 12px;border-radius:8px;font-size:13.5px;
+  background:var(--bg3);border:1px solid var(--border2);color:var(--text);outline:none;font-family:inherit;
+}
+.builder input:focus{border-color:var(--accent);}
+.out{margin-top:14px;word-break:break-all;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px;font-size:12.5px;font-family:Consolas,monospace;color:var(--ok);}
+a{color:var(--accent);}
+.top a{font-size:13px;text-decoration:none;}
+ul{margin:8px 0 8px 20px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a href="/">← bytenode 계정 홈</a></div>
+  <h1 style="margin-top:18px">bytenode 계정 <span>· 개발자 / OAuth 설정</span></h1>
+  <p style="margin-top:8px">bytenode 통합 계정(SSO)을 내 서비스에 연동하는 방법입니다. 계정 원본은 bytenode이며, 이 서버가 로그인 UI와 OAuth 2.0 인가를 제공합니다.</p>
+
+  <h2>1. 등록된 클라이언트</h2>
+  <p>현재 등록된 서비스와 허용된 redirect origin입니다. (localhost는 항상 허용)</p>
+  <table id="clientTable">
+    <tr><th>client_id</th><th>허용 origin</th></tr>
+  </table>
+  <p>새 서비스 등록 또는 origin 추가는 Vercel 환경변수 <code>EXTRA_ORIGINS</code>(형식: <code>client_id|https://도메인</code>, 쉼표 구분)로 합니다.</p>
+
+  <h2>2. 간단 연동 (SSO 리다이렉트)</h2>
+  <p>가장 쉬운 방법. 로그인/가입 버튼을 아래 주소로 연결하면, 완료 후 <code>redirect</code> 주소로 <code>#bn_token=&lt;토큰&gt;</code>을 붙여 돌아갑니다.</p>
+  <pre>로그인:   https://bytenode-account.vercel.app/login?redirect=&lt;내 서비스 주소&gt;
+회원가입: https://bytenode-account.vercel.app/welcome?redirect=&lt;내 서비스 주소&gt;</pre>
+  <p>돌아온 페이지에서 토큰 저장:</p>
+  <pre>const m = location.hash.match(/bn_token=([^&amp;]+)/);
+if (m) {
+  localStorage.setItem('bn_token', decodeURIComponent(m[1]));
+  history.replaceState(null, '', location.pathname);
+}</pre>
+
+  <h2>3. OAuth 2.0 (authorization code)</h2>
+  <p>표준 코드 교환 방식이 필요하면 아래 엔드포인트를 사용합니다.</p>
+  <table>
+    <tr><th>엔드포인트</th><th>설명</th></tr>
+    <tr><td><code>GET /authorize</code></td><td><code>response_type=code&amp;client_id&amp;redirect_uri&amp;state</code> — 로그인 후 <code>redirect_uri?code=…&amp;state=…</code>로 이동</td></tr>
+    <tr><td><code>POST /token</code></td><td><code>{ grant_type:"authorization_code", code, client_id }</code> → <code>{ access_token, token_type, user }</code></td></tr>
+    <tr><td><code>GET /userinfo</code></td><td>헤더 <code>Authorization: Bearer &lt;access_token&gt;</code> → 유저 정보</td></tr>
+  </table>
+  <ul>
+    <li>인가 코드는 <b>2분</b> 내 1회 교환해야 합니다.</li>
+    <li><code>access_token</code>은 bytenode JWT(30일)로, bytenode API에도 그대로 사용할 수 있습니다.</li>
+    <li>토큰 검증은 항상 <code>/userinfo</code> 호출로 하세요 (직접 decode 신뢰 금지).</li>
+  </ul>
+
+  <h2>4. 인가 URL 만들기</h2>
+  <div class="builder">
+    <label>client_id</label>
+    <select id="bCid"></select>
+    <label>redirect_uri (완료 후 돌아갈 주소)</label>
+    <input id="bRu" placeholder="https://myservice.vercel.app/callback">
+    <label>state (선택, CSRF 방지용 무작위 문자열)</label>
+    <input id="bState" placeholder="xyz123">
+    <label>방식</label>
+    <select id="bMode">
+      <option value="oauth">OAuth 2.0 (code 교환)</option>
+      <option value="simple">간단 SSO (#bn_token)</option>
+    </select>
+    <div class="out" id="bOut"></div>
+  </div>
+
+  <h2>5. 계정 API (프록시)</h2>
+  <table>
+    <tr><th>엔드포인트</th><th>설명</th></tr>
+    <tr><td><code>POST /api/login</code></td><td><code>{ username, password }</code> → <code>{ token, user }</code></td></tr>
+    <tr><td><code>POST /api/register</code></td><td><code>{ username, displayName, password }</code> → <code>{ token, user }</code></td></tr>
+    <tr><td><code>GET /api/me</code></td><td>Bearer 토큰 검증 + 유저 정보</td></tr>
+  </table>
+  <p>이 서버는 CORS가 열려 있어 브라우저에서 직접 호출할 수 있습니다. 정책: <a href="/terms">이용약관</a> · <a href="/privacy">개인정보처리방침</a></p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+fetch('/api/clients').then(r => r.json()).then(list => {
+  const t = $('clientTable');
+  list.forEach(c => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td><code>' + c.client_id + '</code></td><td>' +
+      (c.origins.length ? c.origins.map(o => '<code>' + o + '</code>').join(' ') : '<span style="color:var(--text2)">미등록 (localhost만 허용)</span>') + '</td>';
+    t.appendChild(tr);
+    const opt = document.createElement('option');
+    opt.value = opt.textContent = c.client_id;
+    $('bCid').appendChild(opt);
+  });
+  build();
+});
+function build() {
+  const cid = $('bCid').value, ru = $('bRu').value.trim(), st = $('bState').value.trim();
+  const base = location.origin;
+  if ($('bMode').value === 'simple') {
+    $('bOut').textContent = base + '/login?redirect=' + encodeURIComponent(ru || 'https://myservice.example/');
+  } else {
+    $('bOut').textContent = base + '/authorize?response_type=code&client_id=' + encodeURIComponent(cid || 'myservice')
+      + '&redirect_uri=' + encodeURIComponent(ru || 'https://myservice.example/callback')
+      + (st ? '&state=' + encodeURIComponent(st) : '');
+  }
+}
+['bCid','bRu','bState','bMode'].forEach(id => { $(id).oninput = build; $(id).onchange = build; });
+</script>
+</body>
+</html>

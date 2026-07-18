@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bytenode 계정 — 로그인</title>
+<style>
+:root{
+  --bg:#0a0a0a; --bg2:#111111; --bg3:#1a1a1a;
+  --border:#262626; --border2:#333333;
+  --text:#e8e8e8; --text2:#999999; --accent:#c8c8c8;
+  --err:#ff6b6b; --ok:#6bcf8e;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI","Apple SD Gothic Neo",sans-serif;}
+body{display:flex;align-items:center;justify-content:center;padding:20px;}
+.card{
+  width:100%;max-width:400px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:14px;padding:36px 32px;
+}
+.logo{font-size:22px;font-weight:700;letter-spacing:-.5px;text-align:center;}
+.logo span{color:var(--text2);}
+.sub{font-size:13px;color:var(--text2);text-align:center;margin:8px 0 26px;line-height:1.6;}
+.sub b{color:var(--accent);font-weight:600;}
+.tabs{display:flex;gap:6px;margin-bottom:22px;background:var(--bg3);border-radius:9px;padding:4px;}
+.tabs button{
+  flex:1;padding:9px 0;border:none;border-radius:6px;background:none;
+  color:var(--text2);font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;
+}
+.tabs button.on{background:var(--bg);color:var(--text);}
+label{display:block;font-size:12.5px;color:var(--text2);margin:14px 0 6px;}
+input[type=text],input[type=password]{
+  width:100%;padding:11px 13px;border-radius:8px;font-size:14px;
+  background:var(--bg3);border:1px solid var(--border2);color:var(--text);outline:none;font-family:inherit;
+}
+input:focus{border-color:var(--accent);}
+.rem{display:flex;align-items:center;gap:7px;margin-top:14px;font-size:13px;color:var(--text2);cursor:pointer;user-select:none;}
+.rem input{accent-color:var(--accent);}
+.btn{
+  width:100%;margin-top:22px;padding:12px 0;border:none;border-radius:8px;
+  background:var(--text);color:#0a0a0a;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;
+}
+.btn:hover{background:#fff;}
+.btn:disabled{opacity:.5;cursor:default;}
+.msg{font-size:13px;margin-top:14px;text-align:center;min-height:18px;}
+.msg.err{color:var(--err);}
+.msg.ok{color:var(--ok);}
+.foot{font-size:12px;color:var(--text2);text-align:center;margin-top:22px;line-height:2;}
+.foot a{color:var(--accent);text-decoration:none;}
+.foot a:hover{text-decoration:underline;}
+#nameRow{display:none;}
+.already{display:none;text-align:center;}
+.already .who{font-size:15px;margin:18px 0 4px;}
+.already .who b{color:#fff;}
+.already .btn{margin-top:18px;}
+.ghost{
+  width:100%;margin-top:10px;padding:11px 0;border:1px solid var(--border2);border-radius:8px;
+  background:none;color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit;
+}
+.ghost:hover{color:var(--text);border-color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">bytenode<span> 계정</span></div>
+  <div class="sub" id="sub">계정 하나로 <b>bytenode · byteexam · bytetext · bytewrite</b>를<br>모두 이용하세요</div>
+
+  <!-- 이미 로그인된 경우 -->
+  <div class="already" id="alreadyBox">
+    <div class="who">이미 <b id="alreadyName"></b>님으로 로그인되어 있습니다</div>
+    <button class="btn" id="continueBtn">이 계정으로 계속하기</button>
+    <button class="ghost" id="switchBtn">다른 계정 사용</button>
+  </div>
+
+  <div id="authBox">
+    <div class="tabs">
+      <button id="tabLogin" class="on" type="button">로그인</button>
+      <button id="tabSignup" type="button">회원가입</button>
+    </div>
+
+    <form id="form" autocomplete="on">
+      <label>아이디</label>
+      <input type="text" id="username" autocomplete="username" required>
+      <div id="nameRow">
+        <label>표시 이름</label>
+        <input type="text" id="displayName" maxlength="20">
+      </div>
+      <label>비밀번호</label>
+      <input type="password" id="password" autocomplete="current-password" required minlength="6" maxlength="128">
+      <label class="rem"><input type="checkbox" id="remember" checked> 로그인 상태 유지</label>
+      <button class="btn" id="submitBtn" type="submit">로그인</button>
+    </form>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="foot">
+    가입 시 <a href="/terms" target="_blank">이용약관</a> 및 <a href="/privacy" target="_blank">개인정보처리방침</a>에 동의하게 됩니다.
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const qs = new URLSearchParams(location.search);
+
+/* 파라미터: OAuth(client_id, redirect_uri, state) 또는 단순 SSO(redirect) */
+const oauth = {
+  clientId: qs.get('client_id'),
+  redirectUri: qs.get('redirect_uri'),
+  state: qs.get('state')
+};
+const simpleRedirect = qs.get('redirect');
+const serviceNames = { bytenode:'bytenode', byteexam:'byteexam', bytetext:'bytetext', bytewrite:'bytewrite' };
+if (oauth.clientId && serviceNames[oauth.clientId]) {
+  $('sub').innerHTML = '<b>' + serviceNames[oauth.clientId] + '</b>에서 사용할 bytenode 계정으로 계속하세요';
+}
+
+let mode = 'login';
+function setMode(m) {
+  mode = m;
+  $('tabLogin').classList.toggle('on', m === 'login');
+  $('tabSignup').classList.toggle('on', m === 'signup');
+  $('nameRow').style.display = m === 'signup' ? 'block' : 'none';
+  $('submitBtn').textContent = m === 'signup' ? '가입하기' : '로그인';
+  $('msg').textContent = '';
+}
+$('tabLogin').onclick = () => setMode('login');
+$('tabSignup').onclick = () => setMode('signup');
+/* /welcome → 회원가입, /login → 로그인 */
+if (location.pathname === '/welcome' || qs.get('mode') === 'signup') setMode('signup');
+
+const getToken = () => localStorage.getItem('bn_token') || sessionStorage.getItem('bn_token') || '';
+function saveSession(token, user, remember) {
+  const st = remember ? localStorage : sessionStorage;
+  const other = remember ? sessionStorage : localStorage;
+  st.setItem('bn_token', token); st.setItem('bn_me', JSON.stringify(user || {}));
+  other.removeItem('bn_token'); other.removeItem('bn_me');
+}
+function clearSession() {
+  ['bn_token','bn_me'].forEach(k => { localStorage.removeItem(k); sessionStorage.removeItem(k); });
+}
+
+/* 인증 완료 후 목적지로 이동 */
+async function finish(token) {
+  if (oauth.clientId && oauth.redirectUri) {
+    const r = await fetch('/api/authorize', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, client_id: oauth.clientId, redirect_uri: oauth.redirectUri, state: oauth.state })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || '인가에 실패했습니다.');
+    location.href = data.location;
+    return;
+  }
+  if (simpleRedirect) {
+    try {
+      const u = new URL(simpleRedirect, location.origin);
+      if (u.protocol === 'https:' || u.protocol === 'http:') {
+        u.hash = 'bn_token=' + encodeURIComponent(token);
+        location.href = u.href;
+        return;
+      }
+    } catch (_) {}
+  }
+  location.href = 'https://bytenode109.vercel.app/';
+}
+
+/* 이미 로그인돼 있으면 확인 후 바로 계속 */
+(async () => {
+  const t = getToken();
+  if (!t) return;
+  try {
+    const r = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + t } });
+    if (!r.ok) { clearSession(); return; }
+    const me = await r.json();
+    $('alreadyName').textContent = me.displayName || me.username;
+    $('alreadyBox').style.display = 'block';
+    $('authBox').style.display = 'none';
+    $('continueBtn').onclick = async () => {
+      $('continueBtn').disabled = true;
+      try { await finish(t); } catch (e) { alert(e.message); $('continueBtn').disabled = false; }
+    };
+    $('switchBtn').onclick = () => {
+      clearSession();
+      $('alreadyBox').style.display = 'none';
+      $('authBox').style.display = 'block';
+    };
+  } catch (_) {}
+})();
+
+$('form').onsubmit = async e => {
+  e.preventDefault();
+  const btn = $('submitBtn'), msg = $('msg');
+  const username = $('username').value.trim();
+  const password = $('password').value;
+  const displayName = $('displayName').value.trim();
+  const remember = $('remember').checked;
+  if (mode === 'signup' && !displayName) { msg.className = 'msg err'; msg.textContent = '표시 이름을 입력하세요.'; return; }
+
+  btn.disabled = true; msg.className = 'msg'; msg.textContent = '처리 중…';
+  try {
+    const url = mode === 'signup' ? '/api/register' : '/api/login';
+    const body = mode === 'signup' ? { username, displayName, password } : { username, password };
+    const r = await fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || '요청에 실패했습니다.');
+    saveSession(data.token, data.user, remember);
+    msg.className = 'msg ok';
+    msg.textContent = (mode === 'signup' ? '가입 완료! ' : '로그인 성공! ') + '이동 중…';
+    await finish(data.token);
+  } catch (err) {
+    msg.className = 'msg err';
+    msg.textContent = err.message;
+    btn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
