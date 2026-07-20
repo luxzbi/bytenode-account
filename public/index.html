@@ -260,8 +260,8 @@ textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,2
       y: anywhere ? Math.random() * H : (Math.random() < .5 ? -10 : H + 10),
       life: 240 + Math.random() * 400,
       hue: 230 + Math.random() * 60,          /* 남보라~보라 */
-      sat: 55 + Math.random() * 40,
-      lum: 58 + Math.random() * 22,
+      sat: 70 + Math.random() * 30,
+      lum: 68 + Math.random() * 20,
       w: .8 + Math.random() * 2,
       sp: .8 + Math.random() * 1.6
     };
@@ -284,9 +284,9 @@ textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,2
       const a = angle(p.x, p.y, t);
       const nx = p.x + Math.cos(a) * p.sp;
       const ny = p.y + Math.sin(a) * p.sp;
-      ctx.strokeStyle = `hsla(${p.hue}, ${p.sat}%, ${p.lum}%, .5)`;
-      ctx.shadowColor = `hsla(${p.hue}, 90%, 65%, .5)`;
-      ctx.shadowBlur = 6;
+      ctx.strokeStyle = `hsla(${p.hue}, ${p.sat}%, ${p.lum}%, .75)`;
+      ctx.shadowColor = `hsla(${p.hue}, 95%, 70%, .8)`;
+      ctx.shadowBlur = 10;
       ctx.lineWidth = p.w;
       ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); ctx.stroke();
       p.x = nx; p.y = ny; p.life--;
