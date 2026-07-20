@@ -254,17 +254,34 @@ textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,2
     lines = Array.from({ length: N }, () => spawn(true));
     if (!raf) raf = requestAnimationFrame(tick);
   }
+  /* 색 팔레트: 보라 중심 + 시안·마젠타, 드물게 골드 */
+  function pickHue() {
+    const r = Math.random();
+    if (r < .5)  return 230 + Math.random() * 60;   /* 남보라~보라 */
+    if (r < .72) return 185 + Math.random() * 25;   /* 시안 */
+    if (r < .92) return 300 + Math.random() * 30;   /* 마젠타~핑크 */
+    return 40 + Math.random() * 15;                 /* 골드 (희귀) */
+  }
   function spawn(anywhere) {
-    return {
+    const kind = Math.random();
+    const p = {
       x: Math.random() * W,
       y: anywhere ? Math.random() * H : (Math.random() < .5 ? -10 : H + 10),
       life: 240 + Math.random() * 400,
-      hue: 230 + Math.random() * 60,          /* 남보라~보라 */
+      hue: pickHue(),
       sat: 70 + Math.random() * 30,
       lum: 68 + Math.random() * 20,
-      w: .8 + Math.random() * 2,
-      sp: .8 + Math.random() * 1.6
+      orb: false
     };
+    if (kind < .12) {          /* 떠다니는 빛 구슬 */
+      p.orb = true; p.r = 1.2 + Math.random() * 2.6; p.sp = .25 + Math.random() * .5;
+      p.life = 300 + Math.random() * 500;
+    } else if (kind < .35) {   /* 굵고 느린 띠 */
+      p.w = 2.2 + Math.random() * 2.4; p.sp = .4 + Math.random() * .6;
+    } else {                   /* 가늘고 빠른 실 */
+      p.w = .6 + Math.random() * 1.2; p.sp = 1.2 + Math.random() * 2;
+    }
+    return p;
   }
   /* 부드러운 유사-노이즈 흐름장 */
   function angle(x, y, t) {
@@ -284,11 +301,19 @@ textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,2
       const a = angle(p.x, p.y, t);
       const nx = p.x + Math.cos(a) * p.sp;
       const ny = p.y + Math.sin(a) * p.sp;
-      ctx.strokeStyle = `hsla(${p.hue}, ${p.sat}%, ${p.lum}%, .75)`;
       ctx.shadowColor = `hsla(${p.hue}, 95%, 70%, .8)`;
-      ctx.shadowBlur = 10;
-      ctx.lineWidth = p.w;
-      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); ctx.stroke();
+      if (p.orb) {
+        /* 빛 구슬: 은은히 숨쉬는 점광 */
+        const breathe = .55 + .45 * Math.sin(t * .002 + p.life);
+        ctx.fillStyle = `hsla(${p.hue}, ${p.sat}%, ${p.lum}%, ${.5 * breathe})`;
+        ctx.shadowBlur = 16;
+        ctx.beginPath(); ctx.arc(nx, ny, p.r, 0, 6.2832); ctx.fill();
+      } else {
+        ctx.strokeStyle = `hsla(${p.hue}, ${p.sat}%, ${p.lum}%, .75)`;
+        ctx.shadowBlur = 10;
+        ctx.lineWidth = p.w;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); ctx.stroke();
+      }
       p.x = nx; p.y = ny; p.life--;
       if (p.life <= 0 || p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) lines[i] = spawn(false);
     }
