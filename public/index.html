@@ -242,7 +242,7 @@ textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,2
   const ctx = cv.getContext('2d');
   let W = 0, H = 0, raf = null, lines = [];
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
-  const N = 90;
+  const N = 140;
 
   function resize() {
     const r = cv.parentElement.getBoundingClientRect();
@@ -259,11 +259,11 @@ textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,2
       x: Math.random() * W,
       y: anywhere ? Math.random() * H : (Math.random() < .5 ? -10 : H + 10),
       life: 240 + Math.random() * 400,
-      hue: 235 + Math.random() * 50,          /* 남보라~보라 */
-      sat: 30 + Math.random() * 45,
-      lum: 40 + Math.random() * 30,
-      w: .4 + Math.random() * 1.4,
-      sp: .35 + Math.random() * .85
+      hue: 230 + Math.random() * 60,          /* 남보라~보라 */
+      sat: 55 + Math.random() * 40,
+      lum: 58 + Math.random() * 22,
+      w: .8 + Math.random() * 2,
+      sp: .8 + Math.random() * 1.6
     };
   }
   /* 부드러운 유사-노이즈 흐름장 */
@@ -275,8 +275,8 @@ textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,2
   let t0 = performance.now();
   function tick(now) {
     const t = now - t0;
-    /* 잔상: 아주 옅게 어둡히기 → 빛의 궤적이 흐르며 사라짐 */
-    ctx.fillStyle = 'rgba(8,9,11,.035)';
+    /* 잔상: 옅게 어둡히기 → 빛의 궤적이 흐르며 사라짐 */
+    ctx.fillStyle = 'rgba(8,9,11,.045)';
     ctx.fillRect(0, 0, W, H);
     ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < lines.length; i++) {
@@ -284,12 +284,15 @@ textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,2
       const a = angle(p.x, p.y, t);
       const nx = p.x + Math.cos(a) * p.sp;
       const ny = p.y + Math.sin(a) * p.sp;
-      ctx.strokeStyle = `hsla(${p.hue}, ${p.sat}%, ${p.lum}%, .16)`;
+      ctx.strokeStyle = `hsla(${p.hue}, ${p.sat}%, ${p.lum}%, .5)`;
+      ctx.shadowColor = `hsla(${p.hue}, 90%, 65%, .5)`;
+      ctx.shadowBlur = 6;
       ctx.lineWidth = p.w;
       ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); ctx.stroke();
       p.x = nx; p.y = ny; p.life--;
       if (p.life <= 0 || p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) lines[i] = spawn(false);
     }
+    ctx.shadowBlur = 0;
     ctx.globalCompositeOperation = 'source-over';
     raf = requestAnimationFrame(tick);
   }
