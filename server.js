@@ -20,10 +20,14 @@ if (SSO_SECRET === 'dev-only-secret-change-me') console.warn('⚠ SSO_SECRET 미
 
 /* ── 등록된 클라이언트(서비스)와 허용 redirect origin ── */
 const CLIENTS = {
-  bytenode: { origins: ['https://bytenode109.vercel.app'] },
-  byteexam: { origins: ['https://byteexam109.vercel.app'] },
-  bytetext: { origins: ['https://bytetext.vercel.app'] },
-  bytewrite:{ origins: [] } /* 배포 후 EXTRA_ORIGINS로 추가 */
+  bytenode:     { origins: ['https://bytenode109.vercel.app'] },
+  byteexam:     { origins: ['https://byteexam109.vercel.app'] },
+  bytetext:     { origins: ['https://bytetext.vercel.app'] },
+  byteworkspace:{ origins: ['https://byteworkspace.vercel.app'] },
+  byteslide:    { origins: ['https://byteslide.vercel.app'] },
+  bytequiz:     { origins: ['https://bytequiz.vercel.app'] },
+  bytedocs:     { origins: ['https://bytedocs.vercel.app'] },
+  bytewrite:    { origins: [] } /* 배포 후 EXTRA_ORIGINS로 추가 */
 };
 /* 환경변수로 origin 추가: EXTRA_ORIGINS=client_id|https://a.com,client_id|https://b.com */
 (process.env.EXTRA_ORIGINS || '').split(',').filter(Boolean).forEach(pair => {
@@ -31,6 +35,13 @@ const CLIENTS = {
   if (CLIENTS[cid] && origin) CLIENTS[cid].origins.push(origin.trim());
 });
 const DEV_OK = origin => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
+/* 단순 SSO(?redirect=) 허용 origin 집합 = 모든 내장 클라이언트 origin */
+const SIMPLE_REDIRECT_ORIGINS = Array.from(new Set(Object.values(CLIENTS).flatMap(c => c.origins)));
+function simpleRedirectAllowed(uri) {
+  try { const u = new URL(uri); return DEV_OK(u.origin) || SIMPLE_REDIRECT_ORIGINS.includes(u.origin); }
+  catch { return false; }
+}
 
 /* 동적 등록 클라이언트(bn_...)는 bytenode Firestore에서 조회 */
 async function getClient(clientId) {
@@ -201,6 +212,11 @@ app.get('/userinfo', async (req, res) => {
     const { status, data } = await bn('/api/auth/me', { headers: { Authorization: req.headers.authorization || '' } });
     res.status(status).json(data);
   } catch (e) { res.status(502).json({ error: '계정 서버에 연결할 수 없습니다.' }); }
+});
+
+/* 단순 SSO 리다이렉트 허용 여부 (토큰 유출 방지: 화이트리스트 외 거부) */
+app.get('/api/redirect-allowed', (req, res) => {
+  res.json({ allowed: simpleRedirectAllowed(String(req.query.uri || '')) });
 });
 
 /* 등록된 클라이언트 목록 (개발자 페이지용) */

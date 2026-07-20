@@ -482,8 +482,14 @@ async function finish(token) {
     try {
       const u = new URL(simpleRedirect, location.origin);
       if (u.protocol === 'https:' || u.protocol === 'http:') {
-        u.hash = 'bn_token=' + encodeURIComponent(token);
-        location.href = u.href;
+        /* 토큰 유출 방지: 서버 화이트리스트로 대상 origin 검증 후에만 토큰 전달 */
+        const chk = await fetch('/api/redirect-allowed?uri=' + encodeURIComponent(u.href)).then(r => r.json()).catch(() => ({ allowed: false }));
+        if (chk.allowed) {
+          u.hash = 'bn_token=' + encodeURIComponent(token);
+          location.href = u.href;
+        } else {
+          location.href = u.origin + u.pathname + u.search;   /* 허용 안 되면 토큰 없이 이동 */
+        }
         return;
       }
     } catch (_) {}
