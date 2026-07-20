@@ -32,33 +32,18 @@ body{background:var(--bg);}
   .pane-auth{flex:0 0 46%;min-width:520px;background:var(--bg);}
   .card{max-width:400px;background:none;border:none;box-shadow:none;padding:24px 8px;}
   .pane-brand{
-    display:flex;flex:1;position:relative;overflow:hidden;
-    align-items:center;justify-content:center;
+    display:block;flex:1;position:relative;overflow:hidden;
     border-left:1px solid var(--border);
-    background:
-      radial-gradient(900px 700px at 85% 100%, rgba(200,205,215,.16), transparent 60%),
-      radial-gradient(700px 500px at 30% 20%, rgba(120,130,150,.08), transparent 65%),
-      linear-gradient(200deg,#101114 0%,#0a0a0b 55%,#0e0f12 100%);
+    background:#08090b;
   }
-  .pane-brand .glyph{
-    font-family:inherit;font-weight:800;font-size:min(34vw,460px);line-height:1;
-    letter-spacing:-.06em;user-select:none;
-    background:linear-gradient(160deg, rgba(220,224,232,.16) 0%, rgba(150,155,165,.05) 55%, rgba(255,255,255,.10) 100%);
-    -webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 8px 40px rgba(0,0,0,.55));
-  }
+  .pane-brand canvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
   .pane-brand .word{
-    position:absolute;left:44px;bottom:36px;font-size:14px;color:var(--text2);letter-spacing:.02em;
+    position:absolute;left:44px;bottom:36px;font-size:14px;color:var(--text2);letter-spacing:.02em;z-index:2;
   }
   .pane-brand .word b{color:var(--text);font-weight:700;}
 }
-.mark{
-  width:44px;height:44px;margin:0 auto 18px;border-radius:12px;
-  background:linear-gradient(145deg,#232529,#141518);
-  border:1px solid var(--border2);
-  display:flex;align-items:center;justify-content:center;
-  font-weight:800;font-size:19px;letter-spacing:-1px;color:var(--text);
-}
+.mark{width:52px;height:52px;margin:0 auto 16px;display:block;}
+.mark img{width:100%;height:100%;object-fit:contain;display:block;}
 .logo{font-size:19px;font-weight:700;letter-spacing:-.4px;text-align:center;}
 .logo span{color:var(--text2);font-weight:500;}
 .sub{font-size:13px;color:var(--text2);text-align:center;margin-top:7px;line-height:1.6;min-height:0;}
@@ -144,7 +129,7 @@ textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,2
 <div class="split">
 <div class="pane-auth">
 <div class="card">
-  <div class="mark">b</div>
+  <div class="mark"><img src="/logo.png" alt="bytenode"></div>
   <div class="logo">bytenode <span>계정</span></div>
   <div class="sub" id="sub"></div>
 
@@ -241,10 +226,74 @@ textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,2
 </div><!-- /pane-auth -->
 
 <div class="pane-brand">
-  <div class="glyph">b</div>
+  <canvas id="artCanvas"></canvas>
   <div class="word"><b>bytenode</b> 통합 계정</div>
 </div>
 </div><!-- /split -->
+
+<script>
+/* ── 미디어아트: 흐르는 빛의 실 (generative flow field) ── */
+(() => {
+  const cv = document.getElementById('artCanvas');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  let W = 0, H = 0, raf = null, lines = [];
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const N = 90;
+
+  function resize() {
+    const r = cv.parentElement.getBoundingClientRect();
+    if (r.width < 10) { if (raf) cancelAnimationFrame(raf); raf = null; return; }
+    W = r.width; H = r.height;
+    cv.width = W * DPR; cv.height = H * DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.fillStyle = '#08090b'; ctx.fillRect(0, 0, W, H);
+    lines = Array.from({ length: N }, () => spawn(true));
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+  function spawn(anywhere) {
+    return {
+      x: Math.random() * W,
+      y: anywhere ? Math.random() * H : (Math.random() < .5 ? -10 : H + 10),
+      life: 240 + Math.random() * 400,
+      hue: 235 + Math.random() * 50,          /* 남보라~보라 */
+      sat: 30 + Math.random() * 45,
+      lum: 40 + Math.random() * 30,
+      w: .4 + Math.random() * 1.4,
+      sp: .35 + Math.random() * .85
+    };
+  }
+  /* 부드러운 유사-노이즈 흐름장 */
+  function angle(x, y, t) {
+    return Math.sin(x * .0016 + t * .00022) * 2.2
+         + Math.cos(y * .0021 - t * .00017) * 1.9
+         + Math.sin((x + y) * .0009 + t * .00013);
+  }
+  let t0 = performance.now();
+  function tick(now) {
+    const t = now - t0;
+    /* 잔상: 아주 옅게 어둡히기 → 빛의 궤적이 흐르며 사라짐 */
+    ctx.fillStyle = 'rgba(8,9,11,.035)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < lines.length; i++) {
+      const p = lines[i];
+      const a = angle(p.x, p.y, t);
+      const nx = p.x + Math.cos(a) * p.sp;
+      const ny = p.y + Math.sin(a) * p.sp;
+      ctx.strokeStyle = `hsla(${p.hue}, ${p.sat}%, ${p.lum}%, .16)`;
+      ctx.lineWidth = p.w;
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); ctx.stroke();
+      p.x = nx; p.y = ny; p.life--;
+      if (p.life <= 0 || p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) lines[i] = spawn(false);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    raf = requestAnimationFrame(tick);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+})();
+</script>
 
 <script>
 const $ = id => document.getElementById(id);
