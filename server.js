@@ -97,10 +97,15 @@ app.use((req, res, next) => {
 app.use(express.static(PUB, { extensions: ['html'] }));
 
 /* ── bytenode API 프록시 ── */
+const INTERNAL_SECRET = process.env.INTERNAL_SECRET || '';
 async function bn(endpoint, options = {}) {
   const r = await fetch(BN_API + endpoint, {
     ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(INTERNAL_SECRET ? { 'x-internal-secret': INTERNAL_SECRET } : {}),
+      ...(options.headers || {})
+    },
     signal: AbortSignal.timeout(10_000)
   });
   const data = await r.json().catch(() => ({}));
