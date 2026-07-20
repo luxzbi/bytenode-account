@@ -152,9 +152,13 @@ app.post('/api/authorize', async (req, res) => {
     const { status } = await bn('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } });
     if (status !== 200) return res.status(401).json({ error: '세션이 만료되었습니다. 다시 로그인하세요.' });
 
-    const payload = { t: token, ru: redirect_uri };
-    if (code_challenge) payload.cc = String(code_challenge);
-    const code = jwt.sign(payload, SSO_SECRET, { audience: client_id, expiresIn: '2m' });
+    /* opaque 랜덤 코드 발급 — 토큰은 코드에 담지 않고 bytenode 서버에만 저장(1회성) */
+    const code = require('crypto').randomBytes(32).toString('hex');
+    const { status: gs } = await bn('/api/oauth/grant', {
+      method: 'POST',
+      body: JSON.stringify({ code, token, clientId: client_id, redirectUri: redirect_uri, codeChallenge: code_challenge || null })
+    });
+    if (gs !== 201) return res.status(500).json({ error: '인가 코드 발급에 실패했습니다.' });
     const u = new URL(redirect_uri);
     u.searchParams.set('code', code);
     if (state) u.searchParams.set('state', state);
@@ -167,27 +171,27 @@ app.post('/token', async (req, res) => {
     const { grant_type, code, client_id, client_secret, code_verifier } = req.body || {};
     if (grant_type && grant_type !== 'authorization_code') return res.status(400).json({ error: 'unsupported_grant_type' });
     if (!code || !client_id) return res.status(400).json({ error: 'invalid_request' });
-    let payload;
-    try { payload = jwt.verify(code, SSO_SECRET, { audience: client_id }); }
-    catch { return res.status(400).json({ error: 'invalid_grant' }); }
+
+    /* 인가 코드를 bytenode에서 1회만 소비 (재사용 시 invalid_grant) */
+    const { status: cs, data: grant } = await bn('/api/oauth/grant/consume', {
+      method: 'POST', body: JSON.stringify({ code, clientId: client_id })
+    });
+    if (cs !== 200) return res.status(400).json({ error: 'invalid_grant' });
+
     /* 발급된 앱(bn_...): client_secret 또는 PKCE(code_verifier) 중 하나로 인증 */
-    if (/^bn_[0-9a-f]{16}$/.test(client_id)) {
-      if (payload.cc) {
-        if (!code_verifier || s256(String(code_verifier)) !== payload.cc)
-          return res.status(401).json({ error: 'invalid_grant', error_description: 'code_verifier가 일치하지 않습니다.' });
-      } else {
-        if (!client_secret) return res.status(401).json({ error: 'invalid_client', error_description: 'client_secret 또는 PKCE가 필요합니다.' });
-        const { status } = await bn('/api/oauth/verify', { method: 'POST', body: JSON.stringify({ clientId: client_id, clientSecret: client_secret }) });
-        if (status !== 200) return res.status(401).json({ error: 'invalid_client' });
-      }
-    } else if (payload.cc) {
-      if (!code_verifier || s256(String(code_verifier)) !== payload.cc)
+    const needsPkce = !!grant.codeChallenge;
+    if (needsPkce) {
+      if (!code_verifier || s256(String(code_verifier)) !== grant.codeChallenge)
         return res.status(401).json({ error: 'invalid_grant', error_description: 'code_verifier가 일치하지 않습니다.' });
+    } else if (/^bn_[0-9a-f]{16}$/.test(client_id)) {
+      if (!client_secret) return res.status(401).json({ error: 'invalid_client', error_description: 'client_secret 또는 PKCE가 필요합니다.' });
+      const { status } = await bn('/api/oauth/verify', { method: 'POST', body: JSON.stringify({ clientId: client_id, clientSecret: client_secret }) });
+      if (status !== 200) return res.status(401).json({ error: 'invalid_client' });
     }
 
-    const { status, data: user } = await bn('/api/auth/me', { headers: { Authorization: 'Bearer ' + payload.t } });
+    const { status, data: user } = await bn('/api/auth/me', { headers: { Authorization: 'Bearer ' + grant.token } });
     if (status !== 200) return res.status(400).json({ error: 'invalid_grant' });
-    res.json({ access_token: payload.t, token_type: 'Bearer', expires_in: 2592000, user });
+    res.json({ access_token: grant.token, token_type: 'Bearer', expires_in: 2592000, user });
   } catch (e) { res.status(500).json({ error: 'server_error' }); }
 });
 
