@@ -42,8 +42,11 @@ body{background:var(--bg);}
   }
   .pane-brand .word b{color:var(--text);font-weight:700;}
 }
-.mark{width:52px;height:52px;margin:0 auto 16px;display:block;}
-.mark img{width:100%;height:100%;object-fit:contain;display:block;}
+.corner-logo{
+  position:absolute;top:22px;left:26px;z-index:3;height:44px;
+}
+.corner-logo img{height:100%;width:auto;object-fit:contain;display:block;}
+.pane-auth{position:relative;}
 .logo{font-size:19px;font-weight:700;letter-spacing:-.4px;text-align:center;}
 .logo span{color:var(--text2);font-weight:500;}
 .sub{font-size:13px;color:var(--text2);text-align:center;margin-top:7px;line-height:1.6;min-height:0;}
@@ -128,8 +131,8 @@ textarea#bio:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(232,232,2
 <body>
 <div class="split">
 <div class="pane-auth">
+<a class="corner-logo" href="/"><img src="/logo-studio.png" alt="bytenode studio"></a>
 <div class="card">
-  <div class="mark"><img src="/logo.png" alt="bytenode"></div>
   <div class="logo">bytenode <span>계정</span></div>
   <div class="sub" id="sub"></div>
 

@@ -15,8 +15,8 @@
 html,body{background:var(--bg);color:var(--text);font-family:"Segoe UI","Apple SD Gothic Neo",sans-serif;-webkit-font-smoothing:antialiased;}
 .wrap{max-width:860px;margin:0 auto;padding:40px 22px 90px;}
 .topbar{display:flex;align-items:center;gap:12px;padding-bottom:22px;border-bottom:1px solid var(--border);}
-.mark{width:34px;height:34px;display:flex;align-items:center;justify-content:center;}
-.mark img{width:100%;height:100%;object-fit:contain;display:block;}
+.mark{height:36px;display:flex;align-items:center;}
+.mark img{height:100%;width:auto;object-fit:contain;display:block;}
 .topbar .t{font-size:15.5px;font-weight:700;letter-spacing:-.3px;}
 .topbar .t span{color:var(--text2);font-weight:500;}
 .topbar .right{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:13px;color:var(--text2);}
@@ -80,7 +80,7 @@ details .body b{color:var(--text);}
 <body>
 <div class="wrap">
   <div class="topbar">
-    <div class="mark"><img src="/logo.png" alt="bytenode"></div>
+    <div class="mark"><img src="/logo-studio.png" alt="bytenode studio"></div>
     <div class="t">bytenode 계정 <span>· 개발자 콘솔</span></div>
     <div class="right">
       <span id="whoami"></span>
@@ -91,7 +91,7 @@ details .body b{color:var(--text);}
 
   <!-- 로그인 게이트 -->
   <div class="login-gate" id="gate" style="display:none">
-    <div class="mark" style="width:46px;height:46px;margin:0 auto"><img src="/logo.png" alt="bytenode"></div>
+    <div class="mark" style="height:52px;margin:0 auto;justify-content:center"><img src="/logo-studio.png" alt="bytenode studio"></div>
     <div class="big">bytenode 계정으로 로그인하세요</div>
     <p>OAuth 앱 등록과 client_id / client_secret 발급은<br>bytenode 계정 소유자만 할 수 있습니다.</p>
     <button class="btn" id="gateLoginBtn">bytenode 계정으로 로그인</button>
