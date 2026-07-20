@@ -34,12 +34,26 @@ const DEV_OK = origin => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(ori
 
 /* 동적 등록 클라이언트(bn_...)는 bytenode Firestore에서 조회 */
 async function getClient(clientId) {
-  if (CLIENTS[clientId]) return { clientId, name: clientId, origins: CLIENTS[clientId].origins, builtin: true };
+  if (CLIENTS[clientId]) return { clientId, name: clientId, redirectUris: CLIENTS[clientId].origins, builtin: true };
   if (!/^bn_[0-9a-f]{16}$/.test(clientId || '')) return null;
   try {
     const { status, data } = await bn('/api/oauth/clients/' + clientId + '/public');
     return status === 200 ? { ...data, builtin: false } : null;
   } catch { return null; }
+}
+
+/* 등록값이 origin이면 해당 origin의 모든 경로 허용,
+   경로가 있으면 정확히 일치하거나 그 하위 경로만 허용 */
+function uriMatches(registered, redirectUri) {
+  try {
+    const reg = new URL(registered);
+    const u = new URL(redirectUri);
+    if (reg.origin !== u.origin) return false;
+    const rp = reg.pathname.replace(/\/+$/, '');
+    if (!rp || rp === '') return true;                       /* origin만 등록 → 전체 허용 */
+    const up = u.pathname.replace(/\/+$/, '');
+    return up === rp || up.startsWith(rp + '/');
+  } catch { return false; }
 }
 
 async function redirectAllowed(clientId, redirectUri) {
@@ -48,9 +62,14 @@ async function redirectAllowed(clientId, redirectUri) {
     if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
     if (DEV_OK(u.origin)) return true;
     const c = await getClient(clientId);
-    return !!c && c.origins.includes(u.origin);
+    if (!c) return false;
+    return (c.redirectUris || []).some(r => uriMatches(r, redirectUri));
   } catch { return false; }
 }
+
+/* PKCE S256 */
+const b64url = buf => buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const s256 = v => b64url(require('crypto').createHash('sha256').update(v).digest());
 
 app.use(express.json({ limit: '100kb' }));
 app.use((req, res, next) => {
@@ -124,15 +143,18 @@ app.get('/authorize', (req, res) => res.sendFile(path.join(PUB, 'index.html')));
 /* 로그인된 사용자의 bn_token → 인가 코드 발급 */
 app.post('/api/authorize', async (req, res) => {
   try {
-    const { token, client_id, redirect_uri, state } = req.body || {};
+    const { token, client_id, redirect_uri, state, code_challenge, code_challenge_method } = req.body || {};
     if (!token || !client_id || !redirect_uri) return res.status(400).json({ error: '필수 파라미터가 없습니다.' });
-    if (!(await redirectAllowed(client_id, redirect_uri))) return res.status(400).json({ error: '허용되지 않은 redirect_uri입니다. /developer에서 앱의 redirect origin을 확인하세요.' });
+    if (code_challenge && code_challenge_method && code_challenge_method !== 'S256') return res.status(400).json({ error: 'code_challenge_method는 S256만 지원합니다.' });
+    if (!(await redirectAllowed(client_id, redirect_uri))) return res.status(400).json({ error: '허용되지 않은 redirect_uri입니다. /developer에서 앱의 redirect URI를 확인하세요.' });
 
     /* 토큰 유효성은 bytenode에 물어봄 */
     const { status } = await bn('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } });
     if (status !== 200) return res.status(401).json({ error: '세션이 만료되었습니다. 다시 로그인하세요.' });
 
-    const code = jwt.sign({ t: token, ru: redirect_uri }, SSO_SECRET, { audience: client_id, expiresIn: '2m' });
+    const payload = { t: token, ru: redirect_uri };
+    if (code_challenge) payload.cc = String(code_challenge);
+    const code = jwt.sign(payload, SSO_SECRET, { audience: client_id, expiresIn: '2m' });
     const u = new URL(redirect_uri);
     u.searchParams.set('code', code);
     if (state) u.searchParams.set('state', state);
@@ -142,22 +164,30 @@ app.post('/api/authorize', async (req, res) => {
 
 app.post('/token', async (req, res) => {
   try {
-    const { grant_type, code, client_id, client_secret } = req.body || {};
+    const { grant_type, code, client_id, client_secret, code_verifier } = req.body || {};
     if (grant_type && grant_type !== 'authorization_code') return res.status(400).json({ error: 'unsupported_grant_type' });
     if (!code || !client_id) return res.status(400).json({ error: 'invalid_request' });
-    /* 개발자 콘솔에서 발급된 앱은 client_secret 필수 */
-    if (/^bn_[0-9a-f]{16}$/.test(client_id)) {
-      if (!client_secret) return res.status(401).json({ error: 'invalid_client', error_description: 'client_secret이 필요합니다.' });
-      const { status } = await bn('/api/oauth/verify', { method: 'POST', body: JSON.stringify({ clientId: client_id, clientSecret: client_secret }) });
-      if (status !== 200) return res.status(401).json({ error: 'invalid_client' });
-    }
     let payload;
     try { payload = jwt.verify(code, SSO_SECRET, { audience: client_id }); }
     catch { return res.status(400).json({ error: 'invalid_grant' }); }
+    /* 발급된 앱(bn_...): client_secret 또는 PKCE(code_verifier) 중 하나로 인증 */
+    if (/^bn_[0-9a-f]{16}$/.test(client_id)) {
+      if (payload.cc) {
+        if (!code_verifier || s256(String(code_verifier)) !== payload.cc)
+          return res.status(401).json({ error: 'invalid_grant', error_description: 'code_verifier가 일치하지 않습니다.' });
+      } else {
+        if (!client_secret) return res.status(401).json({ error: 'invalid_client', error_description: 'client_secret 또는 PKCE가 필요합니다.' });
+        const { status } = await bn('/api/oauth/verify', { method: 'POST', body: JSON.stringify({ clientId: client_id, clientSecret: client_secret }) });
+        if (status !== 200) return res.status(401).json({ error: 'invalid_client' });
+      }
+    } else if (payload.cc) {
+      if (!code_verifier || s256(String(code_verifier)) !== payload.cc)
+        return res.status(401).json({ error: 'invalid_grant', error_description: 'code_verifier가 일치하지 않습니다.' });
+    }
 
     const { status, data: user } = await bn('/api/auth/me', { headers: { Authorization: 'Bearer ' + payload.t } });
     if (status !== 200) return res.status(400).json({ error: 'invalid_grant' });
-    res.json({ access_token: payload.t, token_type: 'Bearer', user });
+    res.json({ access_token: payload.t, token_type: 'Bearer', expires_in: 2592000, user });
   } catch (e) { res.status(500).json({ error: 'server_error' }); }
 });
 
@@ -186,7 +216,7 @@ app.post('/api/apps', async (req, res) => {
     const { status, data } = await bn('/api/oauth/clients', {
       method: 'POST',
       headers: { Authorization: req.headers.authorization || '' },
-      body: JSON.stringify({ name: req.body?.name, origins: req.body?.origins })
+      body: JSON.stringify({ name: req.body?.name, uris: req.body?.uris || req.body?.origins })
     });
     res.status(status).json(data);
   } catch (e) { res.status(502).json({ error: '계정 서버에 연결할 수 없습니다.' }); }

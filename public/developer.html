@@ -121,9 +121,9 @@ details .body b{color:var(--text);}
     <div class="card" id="createBox">
       <label>앱 이름</label>
       <input type="text" id="appName" maxlength="40" placeholder="예: bytewrite">
-      <label>redirect origin (줄바꿈으로 최대 5개)</label>
-      <textarea id="appOrigins" placeholder="https://bytewrite.vercel.app&#10;https://myapp.example.com"></textarea>
-      <div class="hint">인가 후 돌아갈 주소의 origin(프로토콜+도메인)만 적습니다. 경로는 자유이며, localhost는 등록 없이 항상 허용됩니다.</div>
+      <label>redirect URI (줄바꿈으로 최대 10개)</label>
+      <textarea id="appOrigins" placeholder="https://myapp.vercel.app/callback&#10;https://myapp.example.com&#10;https://example.exe/api"></textarea>
+      <div class="hint">인가 후 돌아갈 전체 주소(경로 포함 가능). 도메인만 적으면 그 도메인의 모든 경로가 허용되고, 경로까지 적으면 해당 경로와 하위 경로만 허용됩니다. http/https 어떤 주소든 등록 가능하며 localhost는 등록 없이 항상 허용됩니다.</div>
       <div class="msg" id="createMsg"></div>
       <div style="display:flex;gap:10px;margin-top:14px">
         <button class="ghost" id="cancelCreate">취소</button>
@@ -161,7 +161,11 @@ if (m) {
           <tr><td>4. 유저 조회</td><td><code class="inline">GET /userinfo</code> — 헤더 <code class="inline">Authorization: Bearer &lt;access_token&gt;</code></td></tr>
         </table>
         <b>주의</b>: 인가 코드는 2분 내 1회만 교환 가능. <code class="inline">client_secret</code>은 서버에서만 사용하고 절대 프론트엔드에 넣지 마세요.
-        토큰 검증은 항상 <code class="inline">/userinfo</code>로 하세요.
+        토큰 검증은 항상 <code class="inline">/userinfo</code>로 하세요.<br><br>
+        <b>PKCE (S256) 지원</b>: 서버 없이 브라우저/앱만으로 연동하려면 secret 대신 PKCE를 쓰세요.
+        <code class="inline">/authorize</code>에 <code class="inline">code_challenge</code>(=BASE64URL(SHA256(code_verifier)))와
+        <code class="inline">code_challenge_method=S256</code>을 추가하고, <code class="inline">/token</code> 교환 시
+        <code class="inline">code_verifier</code>를 보내면 client_secret 없이 교환됩니다.
       </div>
     </details>
 
@@ -228,7 +232,7 @@ async function loadApps() {
         <div class="info">
           <div class="nm">${a.name}</div>
           <div class="cid">${a.clientId}</div>
-          <div class="org">${(a.origins || []).join(' · ')}</div>
+          <div class="org">${(a.redirectUris || a.origins || []).join(' · ')}</div>
         </div>
         <div class="act"><button class="ghost danger" onclick="delApp('${a.clientId}', '${(a.name || '').replace(/'/g, '')}')">삭제</button></div>
       </div>`).join('');
@@ -268,12 +272,12 @@ $('cancelCreate').onclick = () => { $('createBox').style.display = 'none'; $('cr
 $('createBtn').onclick = async () => {
   const msg = $('createMsg');
   const name = $('appName').value.trim();
-  const origins = $('appOrigins').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const uris = $('appOrigins').value.split('\n').map(s => s.trim()).filter(Boolean);
   if (!name) { msg.className = 'msg err'; msg.textContent = '앱 이름을 입력하세요.'; return; }
-  if (!origins.length) { msg.className = 'msg err'; msg.textContent = 'redirect origin을 1개 이상 입력하세요.'; return; }
+  if (!uris.length) { msg.className = 'msg err'; msg.textContent = 'redirect URI를 1개 이상 입력하세요.'; return; }
   $('createBtn').disabled = true; msg.className = 'msg'; msg.textContent = '발급 중…';
   try {
-    const r = await api('POST', '/api/apps', { name, origins });
+    const r = await api('POST', '/api/apps', { name, uris });
     $('newCid').textContent = r.clientId;
     $('newSecret').textContent = r.clientSecret;
     $('secretBox').style.display = 'block';

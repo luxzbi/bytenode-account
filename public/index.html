@@ -341,7 +341,9 @@ const qs = new URLSearchParams(location.search);
 const oauth = {
   clientId: qs.get('client_id'),
   redirectUri: qs.get('redirect_uri'),
-  state: qs.get('state')
+  state: qs.get('state'),
+  codeChallenge: qs.get('code_challenge'),
+  codeChallengeMethod: qs.get('code_challenge_method')
 };
 const simpleRedirect = qs.get('redirect');
 const serviceNames = { bytenode:'bytenode', byteexam:'byteexam', bytetext:'bytetext', bytewrite:'bytewrite' };
@@ -469,7 +471,7 @@ async function finish(token) {
   if (oauth.clientId && oauth.redirectUri) {
     const r = await fetch('/api/authorize', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, client_id: oauth.clientId, redirect_uri: oauth.redirectUri, state: oauth.state })
+      body: JSON.stringify({ token, client_id: oauth.clientId, redirect_uri: oauth.redirectUri, state: oauth.state, code_challenge: oauth.codeChallenge, code_challenge_method: oauth.codeChallengeMethod })
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || '인가에 실패했습니다.');
