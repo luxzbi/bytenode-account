@@ -26,7 +26,7 @@ const CLIENTS = {
   byteworkspace:{ origins: ['https://byteworkspace.vercel.app'] },
   byteslide:    { origins: ['https://byteslide.vercel.app'] },
   bytequiz:     { origins: ['https://bytequiz.vercel.app'] },
-  bytedocs:     { origins: ['https://bytedocs.vercel.app'] },
+  bytedocs:     { origins: ['https://bytewiki.vercel.app'] },
   bytewrite:    { origins: [] } /* 배포 후 EXTRA_ORIGINS로 추가 */
 };
 /* 환경변수로 origin 추가: EXTRA_ORIGINS=client_id|https://a.com,client_id|https://b.com */
