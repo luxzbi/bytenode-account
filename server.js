@@ -43,6 +43,10 @@ function simpleRedirectAllowed(uri) {
   try { const u = new URL(uri); return DEV_OK(u.origin) || SIMPLE_REDIRECT_ORIGINS.includes(u.origin); }
   catch { return false; }
 }
+/* CORS 허용 판단: 등록된 byte 서비스 오리진 + 로컬 개발 주소만 */
+function corsAllowed(origin) {
+  return DEV_OK(origin) || SIMPLE_REDIRECT_ORIGINS.includes(origin);
+}
 
 /* 동적 등록 클라이언트(bn_...)는 bytenode Firestore에서 조회 */
 async function getClient(clientId) {
@@ -88,11 +92,30 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
-  /* 각 서비스 프론트에서 직접 호출할 수 있게 CORS 개방 (토큰은 헤더/바디로만 전달) */
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  /* 로그인·가입 화면이 올라가는 서버라 외부 스크립트 주입을 원천 차단한다.
+     페이지가 인라인 <script>/<style>을 쓰므로 그 둘만 허용한다. */
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "connect-src 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "base-uri 'self'"
+  ].join('; '));
+  /* CORS: 등록된 byte 서비스 오리진에만 허용한다.
+     예전에는 요청 Origin을 그대로 반영해서 아무 사이트나 계정·OAuth API를
+     호출하고 응답을 읽을 수 있었다. 토큰은 헤더/바디로만 전달한다. */
+  const origin = req.headers.origin;
+  if (origin && corsAllowed(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(origin && !corsAllowed(origin) ? 403 : 204);
   next();
 });
 app.use(express.static(PUB, { extensions: ['html'] }));
