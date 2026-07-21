@@ -426,6 +426,28 @@ $('prevBtn').onclick = () => { if (step > 0) showStep(step - 1); };
 $('nextBtn').onclick = async () => {
   const err = validateStep(step);
   if (err) return stepError(err);
+  /* 2단계(아이디): 다음으로 넘어가기 전에 중복 아이디를 서버에서 확인 */
+  if (step === 1) {
+    const btn = $('nextBtn');
+    const u = $('suId').value.trim();
+    btn.disabled = true; $('msg').className = 'msg'; $('msg').textContent = '아이디 확인 중…';
+    try {
+      const r = await fetch('/api/username-available?u=' + encodeURIComponent(u));
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.available) {
+        stepError('이미 사용 중인 아이디입니다. 다른 아이디를 입력하세요.');
+        $('suId').focus();
+        btn.disabled = false;
+        return;
+      }
+    } catch (e) {
+      stepError('아이디 확인에 실패했습니다. 잠시 후 다시 시도하세요.');
+      btn.disabled = false;
+      return;
+    }
+    btn.disabled = false; $('msg').textContent = ''; $('msg').className = 'msg';
+    return showStep(step + 1);
+  }
   if (step < 4) return showStep(step + 1);
   /* 최종 가입 */
   const btn = $('nextBtn'), msg = $('msg');

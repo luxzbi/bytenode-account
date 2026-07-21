@@ -27,6 +27,7 @@ const CLIENTS = {
   byteslide:    { origins: ['https://byteslide.vercel.app'] },
   bytequiz:     { origins: ['https://bytequiz.vercel.app'] },
   bytedocs:     { origins: ['https://bytewiki.vercel.app'] },
+  byteadmin:    { origins: ['https://byteadmin-sand.vercel.app'] },
   bytewrite:    { origins: [] } /* 배포 후 EXTRA_ORIGINS로 추가 */
 };
 /* 환경변수로 origin 추가: EXTRA_ORIGINS=client_id|https://a.com,client_id|https://b.com */
@@ -126,6 +127,14 @@ app.post('/api/register', async (req, res) => {
     const { status, data } = await bn('/api/auth/register', { method: 'POST', body: JSON.stringify({ username, displayName, password }) });
     res.status(status).json(data);
   } catch (e) { res.status(502).json({ error: '계정 서버에 연결할 수 없습니다.' }); }
+});
+
+/* 아이디 중복 검사(가입 마법사 2단계) */
+app.get('/api/username-available', async (req, res) => {
+  try {
+    const { status, data } = await bn('/api/auth/username-available?u=' + encodeURIComponent(String(req.query.u || '')));
+    res.status(status).json(data);
+  } catch (e) { res.status(502).json({ available: false, error: '계정 서버에 연결할 수 없습니다.' }); }
 });
 
 app.patch('/api/me', async (req, res) => {
