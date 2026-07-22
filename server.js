@@ -9,6 +9,16 @@ const jwt     = require('jsonwebtoken');
 const path    = require('path');
 
 const app  = express();
+app.disable('x-powered-by');   /* 서버 기술 스택 노출 차단 */
+app.set('trust proxy', 1);
+
+/* 인증 관련 엔드포인트 속도 제한.
+   로그인은 bytenode가 계정별로도 막지만, 여기서 IP 단위로 한 겹 더 둔다.
+   아이디 중복확인은 계정 열거에 쓰일 수 있어 함께 제한한다. */
+const rateLimit = require('express-rate-limit');
+const authLimit = rateLimit({ windowMs: 10*60_000, limit: 40, standardHeaders: 'draft-7', legacyHeaders: false,
+  message: { error: '요청이 너무 잦습니다. 잠시 후 다시 시도하세요.' } });
+app.use(['/api/login','/api/register','/api/username-available','/token','/api/authorize'], authLimit);
 const PUB  = path.join(__dirname, 'public');
 const PORT = process.env.PORT || 5170;
 
