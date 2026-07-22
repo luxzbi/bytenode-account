@@ -526,7 +526,23 @@ async function finish(token) {
       }
     } catch (_) {}
   }
-  location.href = 'https://bytenode109.vercel.app/';
+  /* redirect가 없으면 "온 곳"으로 되돌린다.
+     referrer가 등록된 byte 서비스면 그곳으로, 아니면 포털로 보낸다.
+     예전에는 무조건 bytenode로 보내서 다른 앱에서 로그인해도 엉뚱한 곳에 떨어졌다. */
+  try {
+    const ref = document.referrer && new URL(document.referrer);
+    if (ref && ref.origin !== location.origin) {
+      const ok = await fetch('/api/redirect-allowed?uri=' + encodeURIComponent(ref.origin + '/'))
+        .then(r => r.json()).catch(() => ({ allowed: false }));
+      if (ok.allowed) {
+        const u = new URL(ref.origin + '/');
+        u.hash = 'bn_token=' + encodeURIComponent(token);
+        location.href = u.href;
+        return;
+      }
+    }
+  } catch (_) {}
+  location.href = 'https://byteworkspace.vercel.app/';
 }
 
 /* 이미 로그인돼 있으면 확인 후 바로 계속 */
