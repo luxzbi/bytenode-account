@@ -314,6 +314,13 @@ app.get('/developer', (req, res) => res.sendFile(path.join(PUB, 'developer.html'
 app.get('/terms',   (req, res) => res.sendFile(path.join(PUB, 'terms.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(PUB, 'privacy.html')));
 
+/* 실제 헬스체크(이전에는 catch-all이 index.html을 200으로 반환해 상태를 못 봤다) */
+app.get('/api/health', async (req, res) => {
+  let upstream = 'down';
+  try { const r = await bn('/api/health'); upstream = r.status === 200 ? 'up' : 'down'; } catch (_) {}
+  res.set('Cache-Control', 'no-store').json({ ok: true, service: 'bytenode-account', upstream });
+});
+
 app.get('*', (req, res) => res.sendFile(path.join(PUB, 'index.html')));
 
 app.listen(PORT, () => console.log(`\n✅ bytenode-account 실행 중 → http://localhost:${PORT}\n`));
