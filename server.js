@@ -35,6 +35,7 @@ const CLIENTS = {
   bytetext:     { origins: ['https://bytetext.vercel.app'] },
   byteworkspace:{ origins: ['https://byteworkspace.vercel.app'] },
   byteslide:    { origins: ['https://byteslide.vercel.app'] },
+  byteform:     { origins: ['https://byteform-wheat.vercel.app'] },
   bytequiz:     { origins: ['https://bytequiz.vercel.app'] },
   bytedocs:     { origins: ['https://bytewiki.vercel.app'] },
   byteadmin:    { origins: ['https://byteadmin-sand.vercel.app'] },
